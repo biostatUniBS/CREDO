@@ -3,13 +3,13 @@ CREDO: Highly confident disease-relevant A-to-I RNA-editing discovery in breast 
 
 ## Prerequisites
 
-Java 1.6 higher
-R 3.0 higher
-R library:VariantAnnotation, data.table, gplots, VennDiagram, parallel, bit64
-Samtools 1.4.1
-Picard 1.12 higher
-VarScan 2.3.7
-GATKAnalysisTK 3.3.0
+- Java 1.6 higher
+- R 3.0 higher
+- R library:VariantAnnotation, data.table, gplots, VennDiagram, parallel, bit64
+- Samtools 1.4.1
+- Picard 1.12 higher
+- VarScan 2.3.7
+- GATKAnalysisTK 3.3.0
 
 ## Pipeline Running
 
@@ -51,11 +51,14 @@ Java -jar picard.jar MarkDuplicates I={input_file} O={output_file} REMOVE_DUPLIC
 
 #### 2.2 InDel realignment
 java -jar pathgatk/GenomeAnalysisTK.jar -T RealignerTargetCreator -R litegenome_dir/GRCh37-lite.fa -I {input_file} -o {output_prefix}.list -known {known_indel_file} 
+
 java -jar pathgatk/GenomeAnalysisTK.jar -T IndelRealigner -R litegenome_dir/GRCh37-lite.fa -I {input_file} -targetIntervals {output_prefix}.list -o {output_filename} -known {known_indel_file}
+
 java -jar picard.jar FixMateInformation INPUT={input_file} OUTPUT={output_file_name} SO=coordinate VALIDATION_STRINGENCY=SILENT CREATE_INDEX=true
 
 #### 2.3 Base quality recalibrator
 java -jar pathgatk/GenomeAnalysisTK.jar -T BaseRecalibrator -R litegenome_dir/GRCh37-lite.fa -I {input_file} -o {recal.table_name} -knownSites {known_dbsnp_indel_files} 
+
 java -jar pathgatk/GenomeAnalysisTK.jar -T PrintReads -R litegenome_dir/GRCh37-lite.fa -I {input_file} -o {output_file} -BQSR { recal.table_name }
 
 #### 2.4 Variant call
@@ -63,12 +66,15 @@ java -jar pathgatk/GenomeAnalysisTK.jar -T HaplotypeCaller -R litegenome_dir/GRC
 
 #### 2.5 Variant recalibration
 java -jar pathgatk/GenomeAnalysisTK.jar -T VariantRecalibrator -R litegenome_dir/GRCh37-lite.fa -input {input_file} -resource:hapmap,known=false,training=true,truth=true,prior=15.0 genomedir/hapmap_3.3.b37.vcf  -resource:omni,known=false,training=true,truth=true,prior=12.0 genomedir/1000G_omni2.5.b37.vcf -resource:1000G,known=false,training=true,truth=false,prior=10.0 genomedir/1000G_phase1.snps.high_confidence.b37.vcf  -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 genomedir/dbsnp_138.b37.vcf  -an DP -an QD -an FS -an SOR -an MQ -an MQRankSum -an ReadPosRankSum -mode SNP -tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 90.0 -recalFile recalibrate_SNP.recal -tranchesFile recalibrate_SNP.tranches -rscriptFile recalibrate_SNP_plots.R                
+
 java -jar pathgatk/GenomeAnalysisTK.jar -T ApplyRecalibration -R  litegenome_dir/GRCh37-lite.fa -input {input_file} -mode SNP --ts_filter_level 99.0 -recalFile recalibrate_SNP.recal -tranchesFile recalibrate_SNP.tranches -o {output_file}                
 java -jar pathgatk/GenomeAnalysisTK.jar -T VariantRecalibrator -R litegenome_dir/GRCh37-lite.fa -input {input_file} -resource:mills,known=true,training=true,truth=true,prior=12.0 genome_dir/Mills_and_1000G_gold_standard.indels.b37.vcf -an QD -an DP -an FS -an SOR -an MQRankSum -an ReadPosRankSum  -mode INDEL -tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 90.0 --maxGaussians 4 -recalFile recalibrate_INDEL.recal -tranchesFile recalibrate_INDEL.tranches -rscriptFile recalibrate_INDEL_plots.R                
+
 java -jar pathgatk/GenomeAnalysisTK.jar -T ApplyRecalibration -R litegenome_dir/GRCh37-lite.fa -input {input_file} -mode INDEL --ts_filter_level 99.0 -recalFile recalibrate_INDEL.recal -tranchesFile recalibrate_INDEL.tranches -o {output_file}
 
 #### 2.6 DNA A-to-G variant Acquisition
-	bcftools filter -i 'AC==1 && REF=="A" && ALT=="G" && DP>4 && QUAL>=50' {input_vcf_file} -o {output_vcf_file}
+
+bcftools filter -i 'AC==1 && REF=="A" && ALT=="G" && DP>4 && QUAL>=50' {input_vcf_file} -o {output_vcf_file}
 
 ### 3 DNA-seq processing to obtain read counts of each loci
 
